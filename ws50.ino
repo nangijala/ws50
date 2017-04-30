@@ -41,9 +41,10 @@ RotaryDialer dialer = RotaryDialer(PIN_READY, PIN_PULSE);
 #define BUTTON_DEBOUNCE_PERIOD 20 //ms
 
 Bounce b_Gabel  = Bounce();
+Bounce b_Ready  = Bounce();
 
 void setup() {
-//  Serial.begin(38400);
+  Serial.begin(38400);
   dialer.setup();
 
   if(!sd.begin(9, SPI_HALF_SPEED)) sd.initErrorHalt();
@@ -54,40 +55,28 @@ void setup() {
 
   pinMode(PIN_GABEL, INPUT_PULLUP);
   b_Gabel.attach(PIN_GABEL);
-  b_Gabel.interval(BUTTON_DEBOUNCE_PERIOD);  
+  b_Gabel.interval(BUTTON_DEBOUNCE_PERIOD); 
+ 
 }
 
 boolean bFlag = false;
 boolean bTimerRunning = false;
+
 void loop() {
   timer.update();
   
   b_Gabel.update();
   if( b_Gabel.fell()){
-    if( bFlag == false){  
      stack.push( String("welcome.mp3") );
-     bFlag = true;
-    }    
-  }
-  if( b_Gabel.rose()){
-    bFlag = false;
   }
   
-  if (dialer.update()) {
-    // Serial.println(dialer.getNextNumber());
-    
-    // char fileName[10];
-    // sprintf(fileName, "zahl%d.mp3",dialer.getNextNumber()) ;
-    
+  if (dialer.update()) {        
     String msg = "zahl" + String(dialer.getNextNumber()) + ".mp3";
-    
-     // MP3player.playMP3(msg.c_str());
-     stack.push( msg );
+    stack.push( msg );
   }
 
   if( stack.count() > 0 && bTimerRunning == false ){
-    // MP3player.playMP3(stack.pop().c_str());
-    stack.peek();
+    String a = stack.peek();
     timer.after( 300, nextSong);
     bTimerRunning = true;
    }
@@ -95,7 +84,7 @@ void loop() {
 
 
 void nextSong(){
-    if( stack.count() > 0){
+   if( stack.count() > 0){
     MP3player.playMP3(stack.pop().c_str());
    }
    bTimerRunning = false;
