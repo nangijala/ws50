@@ -13,22 +13,15 @@
 #define PIN_PULSE A1
 #define PIN_GABEL A2
 
+#undef LOGGING
+
+#define LAUTSTAERKE 30
+
 Timer timer;
 
 SdFat sd;
 
 SFEMP3Shield MP3player;
-
-class Msg{
-  
-  public:
-    Msg(int delay=300){
-    timeout = delay;
-  };
-  
-  int timeout;
-  String name;
-};
 
 StackArray <String> stack;
 
@@ -96,13 +89,10 @@ class NumberTracker{
     if( !isDialing())
       return false;
       
+    if( index < NUMLEN)
+      return false;
+        
     for(int i=0; i< index; i++){
-      /*
-      Serial.print("Vergleiche ");
-      Serial.print( i );      
-      Serial.print( numbers[i] );
-      Serial.print( waitFor[i] );
-      */
       if( i > NUMLEN || numbers[i] != waitFor[i]){
         reset();
         return true;
@@ -134,7 +124,7 @@ void setup() {
   if (!sd.chdir("/")) sd.errorHalt("sd.chdir");
 
   MP3player.begin();
-  MP3player.setVolume(0,0);
+  MP3player.setVolume(LAUTSTAERKE,LAUTSTAERKE);
 
   pinMode(PIN_GABEL, INPUT_PULLUP);
   b_Gabel.attach(PIN_GABEL);
@@ -154,27 +144,39 @@ void loop() {
   int gabeValue = b_Gabel.read();
     
   if( b_Gabel.fell()){
-     stack.push( String("welcome.mp3") );
+     stack.push( String("hallo.mp3") );
   }
   if( b_Gabel.rose()){
-     Serial.println("Aufgelegt");
+     Serial.println("Aufgelegt");     
     tracker.reset();     
   }
 
   
   if (dialer.update()) {  
     int theNumber = dialer.getNextNumber();       
+
+#ifdef LOGGING    
     String msg = "zahl" + String(theNumber) + ".mp3";
-    stack.push( msg );
+    stack.push( msg )
+#endif
+
     tracker.add(theNumber);
   }
 
   if( tracker.checkIsCorrectNumber() == true){
+#ifdef LOGGING    
     Serial.println( "Korrekt");
+#endif
+    stack.push( String("korrekt.mp3") );
+    
   }
 
   if( tracker.checkIsWrongNumber() ){
+#ifdef LOGGING        
     Serial.println( "Falsch Verbunden");
+#endif
+    stack.push( String("falsch.mp3") );
+    
   }
  
   if( stack.count() > 0 && bTimerRunning == false ){
@@ -186,15 +188,18 @@ void loop() {
 }
 
 void overTime(){   
+#ifdef LOGGING  
    Serial.println( "Abgelaufen");
+#endif   
+   stack.push( String("timeout.mp3") );
    tracker.reset();
 }
   
 void nextSong(){
    if( stack.count() > 0){
-    String song = stack.pop();
-    MP3player.playMP3(song.c_str());
+      String song = stack.pop();
+      MP3player.playMP3(song.c_str());
    }
    bTimerRunning = false;
- }
+}
  
