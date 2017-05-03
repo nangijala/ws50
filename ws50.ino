@@ -13,7 +13,7 @@
 #define PIN_PULSE A1
 #define PIN_GABEL A2
 
-#undef LOGGING
+#define LOGGING 
 
 #define LAUTSTAERKE 30
 
@@ -65,6 +65,7 @@ class NumberTracker{
   }
   
   reset(){
+    Serial.println("Reset");
     stopTimer();    
     index = 0;
     for(int i=0; i< MAX_BUFFER; i++){
@@ -107,6 +108,8 @@ class NumberTracker{
     
 };
 
+int gabelValue = LOW;
+
 NumberTracker tracker = NumberTracker();
 
 RotaryDialer dialer = RotaryDialer(PIN_READY, PIN_PULSE);
@@ -114,10 +117,20 @@ RotaryDialer dialer = RotaryDialer(PIN_READY, PIN_PULSE);
 #define BUTTON_DEBOUNCE_PERIOD 20 //ms
 
 Bounce b_Gabel  = Bounce();
-Bounce b_Ready  = Bounce();
+
+void keepAlive(){
+ if( stack.isEmpty()){
+  if( gabelValue )
+    stack.push( String("ring.mp3") );
+   else
+    stack.push( String("rauschen.mp3") );
+ }
+}
 
 void setup() {
+ #ifdef LOGGING
   Serial.begin(38400);
+ #endif
   dialer.setup();
 
   if(!sd.begin(9, SPI_HALF_SPEED)) sd.initErrorHalt();
@@ -129,11 +142,11 @@ void setup() {
   pinMode(PIN_GABEL, INPUT_PULLUP);
   b_Gabel.attach(PIN_GABEL);
   b_Gabel.interval(BUTTON_DEBOUNCE_PERIOD); 
- 
+  timer.every(10000, keepAlive);
+  timer.every(300, nextSong);
 }
 
 boolean bFlag = false;
-boolean bTimerRunning = false;
 
 void loop() {
   timer.update();
@@ -141,14 +154,20 @@ void loop() {
   b_Gabel.update();
 
   // Get the updated value :
-  int gabeValue = b_Gabel.read();
+  gabelValue = b_Gabel.read();
     
   if( b_Gabel.fell()){
+     MP3player.stopTrack();    
      stack.push( String("hallo.mp3") );
   }
+  
   if( b_Gabel.rose()){
-     Serial.println("Aufgelegt");     
-    tracker.reset();     
+#ifdef LOGGING     
+     Serial.println("Aufgelegt");   
+#endif     
+    MP3player.stopTrack();    
+    if( tracker.isDialing())   
+      tracker.reset();     
   }
 
   
@@ -156,10 +175,8 @@ void loop() {
     int theNumber = dialer.getNextNumber();       
 
 #ifdef LOGGING    
-    String msg = "zahl" + String(theNumber) + ".mp3";
-    stack.push( msg )
+    Serial.println("Gewaehlt: "+ String(theNumber) );
 #endif
-
     tracker.add(theNumber);
   }
 
@@ -173,17 +190,12 @@ void loop() {
 
   if( tracker.checkIsWrongNumber() ){
 #ifdef LOGGING        
-    Serial.println( "Falsch Verbunden");
+    //Serial.println( "Falsch Verbunden");
 #endif
     stack.push( String("falsch.mp3") );
     
   }
  
-  if( stack.count() > 0 && bTimerRunning == false ){
-    String a = stack.peek();
-    timer.after( 300, nextSong);
-    bTimerRunning = true;
-   }
    
 }
 
@@ -196,10 +208,19 @@ void overTime(){
 }
   
 void nextSong(){
+   if( MP3player.isPlaying())
+    return;
+    
+#ifdef LOGGING  
+   Serial.println( "Stacksize" + String(stack.count()));
+#endif   
+    
    if( stack.count() > 0){
       String song = stack.pop();
+#ifdef LOGGING  
+   Serial.println( "Now Playing " + song);
+#endif      
       MP3player.playMP3(song.c_str());
    }
-   bTimerRunning = false;
 }
  
