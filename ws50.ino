@@ -20,7 +20,6 @@
 Timer timer;
 
 SdFat sd;
-
 SFEMP3Shield MP3player;
 
 StackArray <String> stack;
@@ -43,19 +42,19 @@ class NumberTracker{
    reset();
   }
 
-  stopTimer(){
+  void stopTimer(){
     if( timerId > -1)
       timer.stop( timerId );
     timerId = -1;
     
   }
   
-  restartTimer(){
+  void restartTimer(){
     stopTimer();
     timerId = timer.after(5000, overTime);
   }
   
-  add( int number){
+  bool add( int number){
     if( index < MAX_BUFFER ){
       restartTimer();
       numbers[ index++ ] = number;
@@ -64,7 +63,7 @@ class NumberTracker{
     return false;
   }
   
-  reset(){
+  void reset(){
     stopTimer();    
     index = 0;
     for(int i=0; i< MAX_BUFFER; i++){
@@ -72,7 +71,7 @@ class NumberTracker{
     }
   }
 
-  checkIsCorrectNumber(){
+  bool checkIsCorrectNumber(){
     for(int i=0; i< NUMLEN; i++){      
       if( i > index){
         return false;
@@ -85,7 +84,7 @@ class NumberTracker{
     return true;
   }
 
-  checkIsWrongNumber(){
+  bool checkIsWrongNumber(){
     if( !isDialing())
       return false;
       
@@ -101,7 +100,7 @@ class NumberTracker{
     return false;   
   }
 
-  isDialing(){
+  bool isDialing(){
     return index>0 ? true : false;
   }
     
@@ -117,7 +116,7 @@ Bounce b_Gabel  = Bounce();
 Bounce b_Ready  = Bounce();
 
 void setup() {
-  Serial.begin(38400);
+
   dialer.setup();
 
   if(!sd.begin(9, SPI_HALF_SPEED)) sd.initErrorHalt();
@@ -146,11 +145,10 @@ void loop() {
   if( b_Gabel.fell()){
      stack.push( String("hallo.mp3") );
   }
+  
   if( b_Gabel.rose()){
-     Serial.println("Aufgelegt");     
     tracker.reset();     
   }
-
   
   if (dialer.update()) {  
     int theNumber = dialer.getNextNumber();       
@@ -164,23 +162,14 @@ void loop() {
   }
 
   if( tracker.checkIsCorrectNumber() == true){
-#ifdef LOGGING    
-    Serial.println( "Korrekt");
-#endif
-    stack.push( String("korrekt.mp3") );
-    
+    stack.push( String("korrekt.mp3") );    
   }
 
   if( tracker.checkIsWrongNumber() ){
-#ifdef LOGGING        
-    Serial.println( "Falsch Verbunden");
-#endif
-    stack.push( String("falsch.mp3") );
-    
+    stack.push( String("falsch.mp3") );    
   }
  
   if( stack.count() > 0 && bTimerRunning == false ){
-    String a = stack.peek();
     timer.after( 300, nextSong);
     bTimerRunning = true;
    }
@@ -188,9 +177,6 @@ void loop() {
 }
 
 void overTime(){   
-#ifdef LOGGING  
-   Serial.println( "Abgelaufen");
-#endif   
    stack.push( String("timeout.mp3") );
    tracker.reset();
 }
@@ -198,7 +184,7 @@ void overTime(){
 void nextSong(){
    if( stack.count() > 0){
       String song = stack.pop();
-      MP3player.playMP3(song.c_str());
+      MP3player.playMP3((char*)song.c_str());
    }
    bTimerRunning = false;
 }
