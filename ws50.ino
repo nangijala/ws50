@@ -113,7 +113,7 @@ RotaryDialer dialer = RotaryDialer(PIN_READY, PIN_PULSE);
 #define BUTTON_DEBOUNCE_PERIOD 20 //ms
 
 Bounce b_Gabel  = Bounce();
-Bounce b_Ready  = Bounce();
+
 
 void setup() {
 
@@ -131,33 +131,29 @@ void setup() {
  
 }
 
-boolean bFlag = false;
-boolean bTimerRunning = false;
+boolean bReadyToCheck = false;
+boolean bSoundShouldBePlaying = false;
 
 void loop() {
-  timer.update();
-  
+  timer.update();  
   b_Gabel.update();
 
   // Get the updated value :
   int gabeValue = b_Gabel.read();
-    
-  if( b_Gabel.fell()){
+
+  // Pickup phone
+  if( b_Gabel.fell()){             
      stack.push( String("hallo.mp3") );
   }
-  
+
+  // Hang up
   if( b_Gabel.rose()){
     tracker.reset();     
   }
-  
+
+  // Update dialer
   if (dialer.update()) {  
-    int theNumber = dialer.getNextNumber();       
-
-#ifdef LOGGING    
-    String msg = "zahl" + String(theNumber) + ".mp3";
-    stack.push( msg )
-#endif
-
+    int theNumber = dialer.getNextNumber();  
     tracker.add(theNumber);
   }
 
@@ -169,23 +165,27 @@ void loop() {
     stack.push( String("falsch.mp3") );    
   }
  
-  if( stack.count() > 0 && bTimerRunning == false ){
-    timer.after( 300, nextSong);
-    bTimerRunning = true;
+  if( stack.count() > 0 && bSoundShouldBePlaying == false ){
+    String song = stack.pop();
+    MP3player.playMP3((char*)song.c_str());
+    bSoundShouldBePlaying = true;    
+    timer.after( 1000, waitForStartTime);    
    }
-   
+   if( bReadyToCheck == true && bSoundShouldBePlaying == true){
+      if( !MP3player.isPlaying()){
+          bSoundShouldBePlaying = false;    
+          bReadyToCheck = false;
+      }
+   }
 }
 
 void overTime(){   
    stack.push( String("timeout.mp3") );
    tracker.reset();
 }
-  
-void nextSong(){
-   if( stack.count() > 0){
-      String song = stack.pop();
-      MP3player.playMP3((char*)song.c_str());
-   }
-   bTimerRunning = false;
+
+void waitForStartTime(){
+  bReadyToCheck = true;
 }
+  
  
