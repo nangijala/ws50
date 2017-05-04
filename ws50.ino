@@ -43,19 +43,19 @@ class NumberTracker{
    reset();
   }
 
-  stopTimer(){
+  void stopTimer(){
     if( timerId > -1)
       timer.stop( timerId );
     timerId = -1;
     
   }
   
-  restartTimer(){
+  void restartTimer(){
     stopTimer();
     timerId = timer.after(5000, overTime);
   }
   
-  add( int number){
+  boolean add( int number){
     if( index < MAX_BUFFER ){
       restartTimer();
       numbers[ index++ ] = number;
@@ -64,7 +64,7 @@ class NumberTracker{
     return false;
   }
   
-  reset(){
+  void reset(){
     Serial.println("Reset");
     stopTimer();    
     index = 0;
@@ -73,7 +73,7 @@ class NumberTracker{
     }
   }
 
-  checkIsCorrectNumber(){
+  bool checkIsCorrectNumber(){
     for(int i=0; i< NUMLEN; i++){      
       if( i > index){
         return false;
@@ -86,7 +86,7 @@ class NumberTracker{
     return true;
   }
 
-  checkIsWrongNumber(){
+  bool checkIsWrongNumber(){
     if( !isDialing())
       return false;
       
@@ -102,7 +102,7 @@ class NumberTracker{
     return false;   
   }
 
-  isDialing(){
+  bool isDialing(){
     return index>0 ? true : false;
   }
     
@@ -220,7 +220,7 @@ void nextSong(){
 #ifdef LOGGING  
    Serial.println( "Now Playing " + song);
 #endif      
-      MP3player.playMP3(song.c_str());
+      MP3player.playMP3((char*)song.c_str());
    }
 }
  
