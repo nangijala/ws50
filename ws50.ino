@@ -11,9 +11,7 @@
 
 #define PIN_READY A0
 #define PIN_PULSE A1
-#define PIN_GABEL A2
 
-#undef LOGGING
 
 #define LAUTSTAERKE 30
 
@@ -114,6 +112,9 @@ RotaryDialer dialer = RotaryDialer(PIN_READY, PIN_PULSE);
 
 Bounce b_Gabel  = Bounce();
 
+void launchHallo(){
+  stack.push( String("hallo.mp3") );
+}
 
 void setup() {
 
@@ -121,14 +122,10 @@ void setup() {
 
   if(!sd.begin(9, SPI_HALF_SPEED)) sd.initErrorHalt();
   if (!sd.chdir("/")) sd.errorHalt("sd.chdir");
-
   MP3player.begin();
   MP3player.setVolume(LAUTSTAERKE,LAUTSTAERKE);
-
-  pinMode(PIN_GABEL, INPUT_PULLUP);
-  b_Gabel.attach(PIN_GABEL);
-  b_Gabel.interval(BUTTON_DEBOUNCE_PERIOD); 
- 
+  tracker.reset();
+  timer.after( 1000, launchHallo);
 }
 
 boolean bReadyToCheck = false;
@@ -136,21 +133,7 @@ boolean bSoundShouldBePlaying = false;
 
 void loop() {
   timer.update();  
-  b_Gabel.update();
-
-  // Get the updated value :
-  int gabeValue = b_Gabel.read();
-
-  // Pickup phone
-  if( b_Gabel.fell()){             
-     stack.push( String("hallo.mp3") );
-  }
-
-  // Hang up
-  if( b_Gabel.rose()){
-    tracker.reset();     
-  }
-
+  
   // Update dialer
   if (dialer.update()) {  
     int theNumber = dialer.getNextNumber();  
